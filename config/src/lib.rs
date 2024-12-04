@@ -4,6 +4,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use std::path;
+use std::env;
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -41,7 +42,12 @@ impl fmt::Display for ConfigError<'_> {
 
 pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, ConfigError> {
     // get position relative to working directory
-    let config_path = match path::absolute(filepath) {
+    let curr_dir = match env::current_dir() {
+        Ok(d) => d,
+        _ => return Err(ConfigError::Error("parent directory of config not found")),
+    };
+
+    let config_path = match path::absolute(curr_dir.join(filepath)) {
         Ok(pb) => pb,
         Err(e) => return Err(ConfigError::IoError(e)),
     };
@@ -55,27 +61,28 @@ pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, ConfigError> {
         Ok(r) => r,
         Err(e) => return Err(ConfigError::IoError(e)),
     };
+
     let config: Config = match serde_json::from_str(&json_as_str) {
         Ok(j) => j,
         Err(e) => return Err(ConfigError::JsonError(e)),
     };
 
     // create absolute filepaths for key and cert
-    let key = match path::absolute(parent_dir.join(&config.key_filepath)) {
+    let key_filepath = match path::absolute(parent_dir.join(&config.key_filepath)) {
         Ok(j) => j,
         Err(e) => return Err(ConfigError::IoError(e)),
     };
-    if key.is_dir() {
+    if key_filepath.is_dir() {
         return Err(ConfigError::Error(
             "failed to create absolute path from relative path for key_filepath",
         ));
     }
 
-    let cert = match path::absolute(parent_dir.join(&config.cert_filepath)) {
+    let cert_filepath = match path::absolute(parent_dir.join(&config.cert_filepath)) {
         Ok(j) => j,
         Err(e) => return Err(ConfigError::IoError(e)),
     };
-    if cert.is_dir() {
+    if cert_filepath.is_dir() {
         return Err(ConfigError::Error(
             "failed to create absolute path from relative path for cert_filepath",
         ));
@@ -83,8 +90,8 @@ pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, ConfigError> {
 
     Ok(Config {
         host_and_port: config.host_and_port,
-        key_filepath: key,
-        cert_filepath: cert,
+        key_filepath: key_filepath,
+        cert_filepath: cert_filepath,
         addresses: config.addresses,
         dangerous_self_signed_addresses: config.dangerous_self_signed_addresses,
     })

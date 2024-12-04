@@ -23,6 +23,9 @@ async fn main() {
         Err(e) => return println!("{}", e),
     };
 
+    println!("config:\n{:?}", &config);
+
+
     // if destination URIs fail to parse, the server fails to run.
     let addresses = match config::create_address_map(&config) {
         Ok(addrs) => addrs,
