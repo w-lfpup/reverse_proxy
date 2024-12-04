@@ -3,15 +3,9 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 use std::env;
-use std::fmt;
 use std::path;
 use std::path::PathBuf;
 use tokio::fs;
-
-pub enum TargetAddress {
-    Safe,
-    Dangerous,
-}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -22,70 +16,52 @@ pub struct Config {
     pub dangerous_self_signed_addresses: Option<Vec<(String, String)>>,
 }
 
-pub enum ConfigError<'a> {
-    IoError(std::io::Error),
-    JsonError(serde_json::Error),
-    UriError(<http::Uri as TryFrom<String>>::Error),
-    Error(&'a str),
-}
-
-impl fmt::Display for ConfigError<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ConfigError::IoError(io_error) => write!(f, "{}", io_error),
-            ConfigError::UriError(json_error) => write!(f, "{}", json_error),
-            ConfigError::JsonError(json_error) => write!(f, "{}", json_error),
-            ConfigError::Error(error) => write!(f, "{}", error),
-        }
-    }
-}
-
-pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, ConfigError> {
+pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, String> {
     // get position relative to working directory
     let curr_dir = match env::current_dir() {
         Ok(d) => d,
-        _ => return Err(ConfigError::Error("parent directory of config not found")),
+        _ => return Err("parent directory of config not found".to_string()),
     };
 
     let config_path = match path::absolute(curr_dir.join(filepath)) {
         Ok(pb) => pb,
-        Err(e) => return Err(ConfigError::IoError(e)),
+        Err(e) => return Err(e.to_string()),
     };
 
     let parent_dir = match config_path.parent() {
         Some(p) => p.to_path_buf(),
-        _ => return Err(ConfigError::Error("parent directory of config not found")),
+        _ => return Err("parent directory of config not found".to_string()),
     };
 
     let json_as_str = match fs::read_to_string(&config_path).await {
         Ok(r) => r,
-        Err(e) => return Err(ConfigError::IoError(e)),
+        Err(e) => return Err(e.to_string()),
     };
 
     let config: Config = match serde_json::from_str(&json_as_str) {
         Ok(j) => j,
-        Err(e) => return Err(ConfigError::JsonError(e)),
+        Err(e) => return Err(e.to_string()),
     };
 
     // create absolute filepaths for key and cert
     let key_filepath = match path::absolute(parent_dir.join(&config.key_filepath)) {
         Ok(j) => j,
-        Err(e) => return Err(ConfigError::IoError(e)),
+        Err(e) => return Err(e.to_string()),
     };
     if key_filepath.is_dir() {
-        return Err(ConfigError::Error(
-            "failed to create absolute path from relative path for key_filepath",
-        ));
+        return Err(
+            "failed to create absolute path from relative path for key_filepath".to_string(),
+        );
     }
 
     let cert_filepath = match path::absolute(parent_dir.join(&config.cert_filepath)) {
         Ok(j) => j,
-        Err(e) => return Err(ConfigError::IoError(e)),
+        Err(e) => return Err(e.to_string()),
     };
     if cert_filepath.is_dir() {
-        return Err(ConfigError::Error(
-            "failed to create absolute path from relative path for cert_filepath",
-        ));
+        return Err(
+            "failed to create absolute path from relative path for cert_filepath".to_string(),
+        );
     }
 
     Ok(Config {
@@ -121,7 +97,7 @@ pub fn get_host_and_port(uri: &Uri) -> Option<String> {
     Some(host.to_string() + ":" + &port)
 }
 
-pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)>, ConfigError> {
+pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)>, String> {
     let mut hashmap = HashMap::<String, (Uri, bool)>::new();
     if let Err(e) = add_addresses_to_map(&mut hashmap, &config.addresses, false) {
         return Err(e);
@@ -140,26 +116,22 @@ fn add_addresses_to_map<'a>(
     url_map: &mut HashMap<String, (Uri, bool)>,
     addresses: &Vec<(String, String)>,
     is_dangerous: bool,
-) -> Result<(), ConfigError<'a>> {
+) -> Result<(), String> {
     for (source_str, target_str) in addresses {
         let source_uri = match Uri::try_from(source_str) {
             Ok(uri) => uri,
-            Err(e) => return Err(ConfigError::UriError(e)),
+            Err(e) => return Err(e.to_string()),
         };
 
         // get port if available
         let host = match get_host_and_port(&source_uri) {
             Some(h) => h,
-            _ => {
-                return Err(ConfigError::Error(
-                    "could not parse host and port from address",
-                ))
-            }
+            _ => return Err("could not parse host and port from address".to_string()),
         };
 
         let target_uri = match Uri::try_from(target_str) {
             Ok(uri) => uri,
-            Err(e) => return Err(ConfigError::UriError(e)),
+            Err(e) => return Err(e.to_string()),
         };
 
         let path_and_query = match get_target_uri(&target_uri) {
@@ -176,18 +148,18 @@ fn add_addresses_to_map<'a>(
     Ok(())
 }
 
-pub fn get_target_uri<'a>(dest_uri: &Uri) -> Result<http::uri::PathAndQuery, ConfigError<'a>> {
+pub fn get_target_uri<'a>(dest_uri: &Uri) -> Result<http::uri::PathAndQuery, String> {
     let mut uri_path = path::Path::new(dest_uri.path());
     if uri_path.is_file() {
         uri_path = match uri_path.parent() {
             Some(uri) => uri,
-            _ => return Err(ConfigError::Error("path has no parent path")),
+            _ => return Err("path has no parent path".to_string()),
         }
     }
 
     let uri_path_str = uri_path.to_string_lossy().to_string();
     match http::uri::PathAndQuery::try_from(uri_path_str) {
         Ok(p_q) => Ok(p_q),
-        Err(e) => return Err(ConfigError::UriError(e)),
+        Err(e) => return Err(e.to_string()),
     }
 }
