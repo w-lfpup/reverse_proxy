@@ -10,7 +10,7 @@ use hyper_util::rt::TokioIo;
 use native_tls::TlsConnector;
 use tokio::net::TcpStream;
 
-use config;
+use crate::addresses;
 
 pub type BoxedResponse = Response<BoxBody<bytes::Bytes, hyper::Error>>;
 
@@ -50,7 +50,7 @@ pub fn create_error_response(
 }
 
 fn get_host_and_authority<'a>(uri: &Uri) -> Result<(&str, String), &'a str> {
-    match (uri.host(), config::get_host_and_port(uri)) {
+    match (uri.host(), addresses::get_host_and_port(uri)) {
         (Some(host), Some(host_and_port)) => Ok((host, host_and_port)),
         _ => Err("failed to retrieve URI from upstream URI"),
     }

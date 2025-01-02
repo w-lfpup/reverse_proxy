@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use crate::requests;
 
-use config;
+use crate::addresses;
 
 const URI_FROM_REQUEST_ERROR: &str = "failed to find upstream URI from request";
 const UPSTREAM_URI_ERROR: &str = "falied to update request with upstream URI";
@@ -17,6 +17,11 @@ const UPSTREAM_URI_ERROR: &str = "falied to update request with upstream URI";
 pub struct Svc {
     pub addresses: Arc<HashMap<String, (http::Uri, bool)>>,
 }
+
+// ALL requests are coming from a single port
+// using a single cert / key pair
+
+// So routing is based on the host (maybe the path too?)
 
 impl Service<Request<Incoming>> for Svc {
     type Response = requests::BoxedResponse;
@@ -36,6 +41,8 @@ impl Service<Request<Incoming>> for Svc {
                 });
             }
         };
+
+        println!("host_and_port: {:?}", &host_and_port);
 
         // get target host from requested host
         let (target_uri, is_dangerous) = match self.addresses.get(&host_and_port) {
@@ -58,13 +65,15 @@ impl Service<Request<Incoming>> for Svc {
             });
         };
 
+        println!("updated request: {:?}", &req);
+
         return Box::pin(async move { requests::get_response(req, is_dangerous).await });
     }
 }
 
 fn get_host_and_port_from_request(req: &Request<Incoming>) -> Option<String> {
     // http 2
-    if let Some(s) = config::get_host_and_port(req.uri()) {
+    if let Some(s) = addresses::get_host_and_port(req.uri()) {
         return Some(s);
     };
 
@@ -84,7 +93,7 @@ fn get_host_and_port_from_request(req: &Request<Incoming>) -> Option<String> {
         _ => return None,
     };
 
-    config::get_host_and_port(&uri)
+    addresses::get_host_and_port(&uri)
 }
 
 fn update_request_with_dest_uri(req: &mut Request<Incoming>, uri: http::Uri) -> Result<(), String> {
