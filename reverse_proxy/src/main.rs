@@ -1,3 +1,4 @@
+use config;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto::Builder;
 use native_tls::Identity;
@@ -5,8 +6,6 @@ use std::sync::Arc;
 use std::{env, path};
 use tokio::fs;
 use tokio::net::TcpListener;
-
-use config;
 
 mod addresses;
 mod requests;
@@ -26,14 +25,14 @@ async fn main() {
 
     println!("{:?}", config);
 
-    // // if destination URIs fail to parse, the server fails to run.
-    // let addresses = match config::create_address_map(&config) {
-    //     Ok(addrs) => addrs,
-    //     Err(e) => return println!("{}", e),
-    // };
-    // let addresses_arc = Arc::new(addresses);
+    // if destination URIs fail to parse, the server fails to run.
+    let addresses = match addresses::create_address_map(&config) {
+        Ok(addrs) => addrs,
+        Err(e) => return println!("{}", e),
+    };
+    let addresses_arc = Arc::new(addresses);
 
-    // println!("{:?}", &addresses_arc);
+    println!("{:?}", &addresses_arc);
 
     // // tls cert and keys
     // let cert = match fs::read(&config.cert_filepath).await {

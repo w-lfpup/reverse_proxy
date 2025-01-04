@@ -1,15 +1,39 @@
-use http::Uri;
+use config::Config;
+use hyper::body::Incoming;
+use hyper::header::HOST;
+use hyper::Request;
+use hyper::Uri;
 use std::collections::HashMap;
 use std::env;
 use std::path;
 use std::path::PathBuf;
 use tokio::fs;
 
-use config::Config;
+// (host, host:port)
 
-pub fn get_host() {
-    
-}
+// pub fn get_host_and_port_http1(req: &Request<Incoming>) -> Option<String> {
+// 	// get host http 1
+// 	let host_header = match req.headers().get(HOST) {
+// 		Some(h) => h,
+// 		_ => return None,
+// 	};
+
+// 	let host_str = match host_header.to_str() {
+// 		Ok(hs) => hs,
+// 		_ => return None,
+// 	};
+
+// 	let host_as_uri = match Uri::try_from(host_str) {
+// 		Ok(hau) => hau,
+// 		_ => return None,
+// 	};
+
+// 	if let Some(host) = host_as_uri.host() {
+// 		return Some(host.to_string())
+// 	}
+
+// 	None
+// }
 
 pub fn get_host_and_port(uri: &Uri) -> Option<String> {
     let host = match uri.host() {
@@ -35,12 +59,46 @@ pub fn get_host_and_port(uri: &Uri) -> Option<String> {
     Some(host.to_string() + ":" + &port)
 }
 
+pub fn get_host(req: &Request<Incoming>) -> Option<String> {
+    // more durable to say
+    // match req.version()
+
+    // http2
+    if let Some(host) = req.uri().host() {
+        return Some(host.to_string());
+    };
+
+    // http 1
+    let host_header = match req.headers().get(HOST) {
+        Some(h) => h,
+        _ => return None,
+    };
+
+    let host_str = match host_header.to_str() {
+        Ok(hs) => hs,
+        _ => return None,
+    };
+
+    let host_as_uri = match Uri::try_from(host_str) {
+        Ok(hau) => hau,
+        _ => return None,
+    };
+
+    if let Some(host) = host_as_uri.host() {
+        return Some(host.to_string());
+    }
+
+    None
+}
+
 pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)>, String> {
+    // get host incoming
     let mut hashmap = HashMap::<String, (Uri, bool)>::new();
     if let Err(e) = add_addresses_to_map(&mut hashmap, &config.addresses, false) {
         return Err(e);
     };
 
+    // get (host and port, is dangerous) outgoing
     if let Some(self_signed_addresses) = &config.dangerous_self_signed_addresses {
         if let Err(e) = add_addresses_to_map(&mut hashmap, &self_signed_addresses, true) {
             return Err(e);
@@ -55,16 +113,18 @@ fn add_addresses_to_map<'a>(
     addresses: &Vec<(String, String)>,
     is_dangerous: bool,
 ) -> Result<(), String> {
+    // get uri for source, get host
+
+    // get uri for target, get host and port
     for (source_str, target_str) in addresses {
         let source_uri = match Uri::try_from(source_str) {
             Ok(uri) => uri,
             Err(e) => return Err(e.to_string()),
         };
 
-        // get port if available
-        let host = match get_host_and_port(&source_uri) {
+        let source_host = match source_uri.host() {
             Some(h) => h,
-            _ => return Err("could not parse host and port from address".to_string()),
+            _ => return Err("could not parse host from source uri".to_string()),
         };
 
         let target_uri = match Uri::try_from(target_str) {
@@ -72,21 +132,9 @@ fn add_addresses_to_map<'a>(
             Err(e) => return Err(e.to_string()),
         };
 
-        let path_and_query = match get_target_uri(&target_uri) {
-            Ok(p_q) => p_q,
-            Err(e) => return Err(e),
-        };
+        // remove path?
 
-        let mut target_parts = target_uri.clone().into_parts();
-        target_parts.path_and_query = Some(path_and_query);
-
-        // forgot to update the target uri?
-        let updated_target_uri = match Uri::from_parts(target_parts) {
-            Ok(p_q) => p_q,
-            Err(e) => return Err(e.to_string()),
-        };
-
-        url_map.insert(host, (updated_target_uri, is_dangerous));
+        url_map.insert(source_host.to_string(), (target_uri, is_dangerous));
     }
 
     Ok(())

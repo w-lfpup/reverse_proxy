@@ -7,9 +7,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::requests;
-
 use crate::addresses;
+use crate::requests;
 
 const URI_FROM_REQUEST_ERROR: &str = "failed to find upstream URI from request";
 const UPSTREAM_URI_ERROR: &str = "falied to update request with upstream URI";
@@ -25,11 +24,12 @@ pub struct Svc {
 
 impl Service<Request<Incoming>> for Svc {
     type Response = requests::BoxedResponse;
-    type Error = http::Error;
+    type Error = hyper::http::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn call(&self, mut req: Request<Incoming>) -> Self::Future {
-        let host_and_port = match get_host_and_port_from_request(&req) {
+        // get origin host from request
+        let host = match addresses::get_host(&req) {
             Some(uri) => uri,
             _ => {
                 return Box::pin(async {
@@ -42,10 +42,27 @@ impl Service<Request<Incoming>> for Svc {
             }
         };
 
-        println!("host_and_port: {:?}", &host_and_port);
+        // get dest uri
+
+        // replace dest_uri path and query with t
+
+        // let host_and_port = match get_host_and_port_from_request(&req) {
+        //     Some(uri) => uri,
+        //     _ => {
+        //         return Box::pin(async {
+        //             // bad request
+        //             requests::create_error_response(
+        //                 &StatusCode::BAD_REQUEST,
+        //                 &URI_FROM_REQUEST_ERROR,
+        //             )
+        //         });
+        //     }
+        // };
+
+        // println!("host_and_port: {:?}", &host_and_port);
 
         // get target host from requested host
-        let (target_uri, is_dangerous) = match self.addresses.get(&host_and_port) {
+        let (target_uri, is_dangerous) = match self.addresses.get(&host) {
             Some((trgt_uri, is_dngrs)) => (trgt_uri.clone(), is_dngrs.clone()),
             _ => {
                 return Box::pin(async {
@@ -97,24 +114,32 @@ fn get_host_and_port_from_request(req: &Request<Incoming>) -> Option<String> {
 }
 
 fn update_request_with_dest_uri(req: &mut Request<Incoming>, uri: http::Uri) -> Result<(), String> {
-    let base_path = match uri.path().strip_suffix("/") {
-        Some(p) => p.to_string(),
-        _ => "".to_string(),
-    };
+    // let base_path = match uri.path().strip_suffix("/") {
+    //     Some(p) => p.to_string(),
+    //     _ => "".to_string(),
+    // };
 
-    let trgt_path = match req.uri().path_and_query() {
-        Some(p) => p.as_str(),
-        _ => "",
-    };
+    // let trgt_path = match req.uri().path_and_query() {
+    //     Some(p) => p.as_str(),
+    //     _ => "",
+    // };
 
-    let combined_path = base_path + trgt_path;
-    let path_and_query = match http::uri::PathAndQuery::try_from(&combined_path) {
-        Ok(p_q) => p_q,
-        Err(e) => return Err(e.to_string()),
-    };
+    // let combined_path = base_path + trgt_path;
+    // let path_and_query = match http::uri::PathAndQuery::try_from(&combined_path) {
+    //     Ok(p_q) => p_q,
+    //     Err(e) => return Err(e.to_string()),
+    // };
 
+    let target_path_opt = req.uri().path_and_query();
     let mut dest_parts = uri.into_parts();
-    dest_parts.path_and_query = Some(path_and_query);
+
+    // start with nothing
+    dest_parts.path_and_query = None;
+    if let Some(path_and_query) = target_path_opt {
+        dest_parts.path_and_query = Some(path_and_query.clone());
+    }
+
+    // dest_parts.path_and_query = target_path_opt.clone();
     if let None = dest_parts.scheme {
         dest_parts.scheme = Some(http::uri::Scheme::HTTP);
     }
