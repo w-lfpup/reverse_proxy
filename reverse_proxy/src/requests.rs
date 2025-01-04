@@ -1,16 +1,16 @@
-use http::Uri;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
 use hyper::client::conn::{http1, http2};
 use hyper::header;
+use hyper::Uri;
 use hyper::{Request, Response, StatusCode};
 use hyper_util::rt::TokioExecutor;
 use hyper_util::rt::TokioIo;
 use native_tls::TlsConnector;
 use tokio::net::TcpStream;
 
-use config;
+use crate::addresses;
 
 pub type BoxedResponse = Response<BoxBody<bytes::Bytes, hyper::Error>>;
 
@@ -20,7 +20,7 @@ const FAILED_TO_PROCESS_REQUEST_ERROR: &str = "failed to process request";
 pub async fn get_response(
     req: Request<Incoming>,
     is_dangerous: bool,
-) -> Result<BoxedResponse, http::Error> {
+) -> Result<BoxedResponse, hyper::http::Error> {
     let version = req.version();
     let scheme = match req.uri().scheme() {
         Some(a) => a.as_str(),
@@ -38,7 +38,7 @@ pub async fn get_response(
 pub fn create_error_response(
     status_code: &StatusCode,
     body_str: &'static str,
-) -> Result<BoxedResponse, http::Error> {
+) -> Result<BoxedResponse, hyper::http::Error> {
     Response::builder()
         .status(status_code)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
@@ -50,7 +50,7 @@ pub fn create_error_response(
 }
 
 fn get_host_and_authority<'a>(uri: &Uri) -> Result<(&str, String), &'a str> {
-    match (uri.host(), config::get_host_and_port(uri)) {
+    match (uri.host(), addresses::get_host_and_port(uri)) {
         (Some(host), Some(host_and_port)) => Ok((host, host_and_port)),
         _ => Err("failed to retrieve URI from upstream URI"),
     }
@@ -91,7 +91,7 @@ async fn create_tls_stream<'a>(
     Ok(tls_stream)
 }
 
-async fn send_http1_request(req: Request<Incoming>) -> Result<BoxedResponse, http::Error> {
+async fn send_http1_request(req: Request<Incoming>) -> Result<BoxedResponse, hyper::http::Error> {
     let (_, addr) = match get_host_and_authority(&req.uri()) {
         Ok(stream) => stream,
         Err(e) => return create_error_response(&StatusCode::BAD_REQUEST, e),
@@ -126,7 +126,7 @@ async fn send_http1_request(req: Request<Incoming>) -> Result<BoxedResponse, htt
 async fn send_http1_tls_request(
     req: Request<Incoming>,
     is_dangerous: bool,
-) -> Result<BoxedResponse, http::Error> {
+) -> Result<BoxedResponse, hyper::http::Error> {
     let (host, addr) = match get_host_and_authority(&req.uri()) {
         Ok(stream) => stream,
         Err(e) => return create_error_response(&StatusCode::BAD_REQUEST, e),
@@ -158,7 +158,7 @@ async fn send_http1_tls_request(
     create_error_response(&StatusCode::BAD_GATEWAY, &FAILED_TO_PROCESS_REQUEST_ERROR)
 }
 
-async fn send_http2_request(req: Request<Incoming>) -> Result<BoxedResponse, http::Error> {
+async fn send_http2_request(req: Request<Incoming>) -> Result<BoxedResponse, hyper::http::Error> {
     let (_, addr) = match get_host_and_authority(&req.uri()) {
         Ok(stream) => stream,
         Err(e) => return create_error_response(&StatusCode::BAD_REQUEST, e),
@@ -193,7 +193,7 @@ async fn send_http2_request(req: Request<Incoming>) -> Result<BoxedResponse, htt
 async fn send_http2_tls_request(
     req: Request<Incoming>,
     is_dangerous: bool,
-) -> Result<BoxedResponse, http::Error> {
+) -> Result<BoxedResponse, hyper::http::Error> {
     let (host, addr) = match get_host_and_authority(&req.uri()) {
         Ok(stream) => stream,
         Err(e) => return create_error_response(&StatusCode::BAD_REQUEST, e),
