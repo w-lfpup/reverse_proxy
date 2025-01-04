@@ -23,16 +23,12 @@ async fn main() {
         Err(e) => return println!("{}", e),
     };
 
-    println!("{:?}", config);
-
     // if destination URIs fail to parse, the server fails to run.
     let addresses = match addresses::create_address_map(&config) {
         Ok(addrs) => addrs,
         Err(e) => return println!("{}", e),
     };
     let addresses_arc = Arc::new(addresses);
-
-    println!("{:?}", &addresses_arc);
 
     // tls cert and keys
     let cert = match fs::read(&config.cert_filepath).await {

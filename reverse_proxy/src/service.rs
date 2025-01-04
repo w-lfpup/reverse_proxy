@@ -28,7 +28,7 @@ impl Service<Request<Incoming>> for Svc {
             _ => {
                 return Box::pin(async {
                     // bad request
-                    requests::create_error_response(
+                    requests::create_fallback_response(
                         &StatusCode::BAD_REQUEST,
                         &URI_FROM_REQUEST_ERROR,
                     )
@@ -42,7 +42,7 @@ impl Service<Request<Incoming>> for Svc {
             _ => {
                 return Box::pin(async {
                     // bad request
-                    requests::create_error_response(
+                    requests::create_fallback_response(
                         &StatusCode::BAD_GATEWAY,
                         &URI_FROM_REQUEST_ERROR,
                     )
@@ -53,14 +53,12 @@ impl Service<Request<Incoming>> for Svc {
         // replace dest_uri path and query with target path and query
         if let Err(_) = update_request_with_dest_uri(&mut req, target_uri) {
             return Box::pin(async {
-                requests::create_error_response(
+                requests::create_fallback_response(
                     &StatusCode::INTERNAL_SERVER_ERROR,
                     &UPSTREAM_URI_ERROR,
                 )
             });
         };
-
-        println!("updated request: {:?}", &req);
 
         return Box::pin(async move { requests::get_response(req, is_dangerous).await });
     }
