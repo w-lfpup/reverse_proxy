@@ -42,26 +42,7 @@ impl Service<Request<Incoming>> for Svc {
             }
         };
 
-        // get dest uri
-
-        // replace dest_uri path and query with t
-
-        // let host_and_port = match get_host_and_port_from_request(&req) {
-        //     Some(uri) => uri,
-        //     _ => {
-        //         return Box::pin(async {
-        //             // bad request
-        //             requests::create_error_response(
-        //                 &StatusCode::BAD_REQUEST,
-        //                 &URI_FROM_REQUEST_ERROR,
-        //             )
-        //         });
-        //     }
-        // };
-
-        // println!("host_and_port: {:?}", &host_and_port);
-
-        // get target host from requested host
+        // get target uri
         let (target_uri, is_dangerous) = match self.addresses.get(&host) {
             Some((trgt_uri, is_dngrs)) => (trgt_uri.clone(), is_dngrs.clone()),
             _ => {
@@ -72,7 +53,7 @@ impl Service<Request<Incoming>> for Svc {
             }
         };
 
-        // the following operations mutate the original request before sends
+        // replace dest_uri path and query with target path and query
         if let Err(_) = update_request_with_dest_uri(&mut req, target_uri) {
             return Box::pin(async {
                 requests::create_error_response(
@@ -88,50 +69,12 @@ impl Service<Request<Incoming>> for Svc {
     }
 }
 
-fn get_host_and_port_from_request(req: &Request<Incoming>) -> Option<String> {
-    // http 2
-    if let Some(s) = addresses::get_host_and_port(req.uri()) {
-        return Some(s);
-    };
-
-    // http 1.1
-    let host_header = match req.headers().get("host") {
-        Some(h) => h,
-        _ => return None,
-    };
-
-    let host_str = match host_header.to_str() {
-        Ok(h_str) => h_str,
-        _ => return None,
-    };
-
-    let uri = match http::Uri::try_from(host_str) {
-        Ok(u) => u,
-        _ => return None,
-    };
-
-    addresses::get_host_and_port(&uri)
-}
-
-fn update_request_with_dest_uri(req: &mut Request<Incoming>, uri: http::Uri) -> Result<(), String> {
-    // let base_path = match uri.path().strip_suffix("/") {
-    //     Some(p) => p.to_string(),
-    //     _ => "".to_string(),
-    // };
-
-    // let trgt_path = match req.uri().path_and_query() {
-    //     Some(p) => p.as_str(),
-    //     _ => "",
-    // };
-
-    // let combined_path = base_path + trgt_path;
-    // let path_and_query = match http::uri::PathAndQuery::try_from(&combined_path) {
-    //     Ok(p_q) => p_q,
-    //     Err(e) => return Err(e.to_string()),
-    // };
-
+fn update_request_with_dest_uri(
+    req: &mut Request<Incoming>,
+    target_uri: http::Uri,
+) -> Result<(), String> {
     let target_path_opt = req.uri().path_and_query();
-    let mut dest_parts = uri.into_parts();
+    let mut dest_parts = target_uri.into_parts();
 
     // start with nothing
     dest_parts.path_and_query = None;

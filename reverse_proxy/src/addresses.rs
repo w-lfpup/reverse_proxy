@@ -4,36 +4,7 @@ use hyper::header::HOST;
 use hyper::Request;
 use hyper::Uri;
 use std::collections::HashMap;
-use std::env;
 use std::path;
-use std::path::PathBuf;
-use tokio::fs;
-
-// (host, host:port)
-
-// pub fn get_host_and_port_http1(req: &Request<Incoming>) -> Option<String> {
-// 	// get host http 1
-// 	let host_header = match req.headers().get(HOST) {
-// 		Some(h) => h,
-// 		_ => return None,
-// 	};
-
-// 	let host_str = match host_header.to_str() {
-// 		Ok(hs) => hs,
-// 		_ => return None,
-// 	};
-
-// 	let host_as_uri = match Uri::try_from(host_str) {
-// 		Ok(hau) => hau,
-// 		_ => return None,
-// 	};
-
-// 	if let Some(host) = host_as_uri.host() {
-// 		return Some(host.to_string())
-// 	}
-
-// 	None
-// }
 
 pub fn get_host_and_port(uri: &Uri) -> Option<String> {
     let host = match uri.host() {
@@ -140,6 +111,7 @@ fn add_addresses_to_map<'a>(
     Ok(())
 }
 
+// for combined paths
 pub fn get_target_uri<'a>(dest_uri: &Uri) -> Result<http::uri::PathAndQuery, String> {
     let mut uri_path = path::Path::new(dest_uri.path());
     if uri_path.is_file() {
