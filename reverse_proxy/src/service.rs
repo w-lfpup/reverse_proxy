@@ -1,4 +1,3 @@
-// use http::HeaderValue;
 use hyper::body::Incoming;
 use hyper::service::Service;
 use hyper::{Request, StatusCode};
@@ -10,17 +9,12 @@ use std::sync::Arc;
 use crate::addresses;
 use crate::requests;
 
-const URI_FROM_REQUEST_ERROR: &str = "failed to find upstream URI from request";
+const URI_FROM_REQUEST_ERROR: &str = "unable to parse upstream URI from request";
 const UPSTREAM_URI_ERROR: &str = "falied to update request with upstream URI";
 
 pub struct Svc {
     pub addresses: Arc<HashMap<String, (http::Uri, bool)>>,
 }
-
-// ALL requests are coming from a single port
-// using a single cert / key pair
-
-// So routing is based on the host (maybe the path too?)
 
 impl Service<Request<Incoming>> for Svc {
     type Response = requests::BoxedResponse;
@@ -48,7 +42,10 @@ impl Service<Request<Incoming>> for Svc {
             _ => {
                 return Box::pin(async {
                     // bad request
-                    requests::create_error_response(&StatusCode::NOT_FOUND, &URI_FROM_REQUEST_ERROR)
+                    requests::create_error_response(
+                        &StatusCode::BAD_GATEWAY,
+                        &URI_FROM_REQUEST_ERROR,
+                    )
                 });
             }
         };
