@@ -110,20 +110,3 @@ fn add_addresses_to_map<'a>(
 
     Ok(())
 }
-
-// for combined paths
-pub fn get_target_uri<'a>(dest_uri: &Uri) -> Result<http::uri::PathAndQuery, String> {
-    let mut uri_path = path::Path::new(dest_uri.path());
-    if uri_path.is_file() {
-        uri_path = match uri_path.parent() {
-            Some(uri) => uri,
-            _ => return Err("path has no parent path".to_string()),
-        }
-    }
-
-    let uri_path_str = uri_path.to_string_lossy().to_string();
-    match http::uri::PathAndQuery::try_from(uri_path_str) {
-        Ok(p_q) => Ok(p_q),
-        Err(e) => return Err(e.to_string()),
-    }
-}
