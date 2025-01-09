@@ -60,17 +60,11 @@ async fn main() {
         // rate limiting on _remote_addr
         let (socket, _remote_addr) = match listener.accept().await {
             Ok(s) => s,
-            Err(_e) => {
-                // log socket error
-                continue;
-            }
+            Err(e) => return println!("{}", e),
         };
         let io = match tls_acceptor.clone().accept(socket).await {
             Ok(s) => TokioIo::new(s),
-            Err(_e) => {
-                // log accepter error
-                continue;
-            }
+            Err(e) => return println!("{}", e),
         };
 
         let service = service::Svc {
