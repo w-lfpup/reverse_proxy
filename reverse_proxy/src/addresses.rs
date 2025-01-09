@@ -4,7 +4,6 @@ use hyper::header::HOST;
 use hyper::Request;
 use hyper::Uri;
 use std::collections::HashMap;
-use std::path;
 
 pub fn get_host_and_port(uri: &Uri) -> Option<String> {
     let host = match uri.host() {
