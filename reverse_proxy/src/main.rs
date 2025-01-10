@@ -66,7 +66,7 @@ async fn main() {
         // errors on tls handshake failure
         let io = match tls_acceptor.clone().accept(socket).await {
             Ok(s) => TokioIo::new(s),
-            Err(e) => continue,
+            Err(_e) => continue,
         };
 
         let service = service::Svc {
