@@ -50,6 +50,7 @@ async fn main() {
         Err(e) => return println!("{}", e),
     };
 
+    // https://docs.rs/native-tls/latest/native_tls/struct.TlsAcceptor.html#examples
     let tls_acceptor = Arc::new(native_acceptor);
 
     // bind tcp listeners
