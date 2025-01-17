@@ -45,10 +45,12 @@ async fn main() {
     };
 
     // create tls acceptor
-    let tls_acceptor = match native_tls::TlsAcceptor::builder(identity).build() {
+    let native_acceptor = match native_tls::TlsAcceptor::new(identity) {
         Ok(acceptor) => tokio_native_tls::TlsAcceptor::from(acceptor),
         Err(e) => return println!("{}", e),
     };
+
+    let tls_acceptor = Arc::new(native_acceptor);
 
     // bind tcp listeners
     let listener = match TcpListener::bind(config.host_and_port).await {
