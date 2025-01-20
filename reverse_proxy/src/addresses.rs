@@ -1,65 +1,6 @@
 use config::Config;
-use hyper::body::Incoming;
-use hyper::header::HOST;
-use hyper::Request;
 use hyper::Uri;
 use std::collections::HashMap;
-
-pub fn get_host_and_port(uri: &Uri) -> Option<String> {
-    let host = match uri.host() {
-        Some(h) => h,
-        _ => return None,
-    };
-
-    let port = match uri.port() {
-        Some(p) => p.to_string(),
-        _ => {
-            let scheme = match uri.scheme() {
-                Some(h) => h.as_str(),
-                _ => "http",
-            };
-
-            match scheme {
-                "https" => "443".to_string(),
-                _ => "80".to_string(),
-            }
-        }
-    };
-
-    Some(host.to_string() + ":" + &port)
-}
-
-pub fn get_host(req: &Request<Incoming>) -> Option<String> {
-    // more durable to say
-    // match req.version()
-
-    // http2
-    if let Some(host) = req.uri().host() {
-        return Some(host.to_string());
-    };
-
-    // http 1
-    let host_header = match req.headers().get(HOST) {
-        Some(h) => h,
-        _ => return None,
-    };
-
-    let host_str = match host_header.to_str() {
-        Ok(hs) => hs,
-        _ => return None,
-    };
-
-    let host_as_uri = match Uri::try_from(host_str) {
-        Ok(hau) => hau,
-        _ => return None,
-    };
-
-    if let Some(host) = host_as_uri.host() {
-        return Some(host.to_string());
-    }
-
-    None
-}
 
 pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)>, String> {
     // get host incoming
@@ -83,8 +24,6 @@ fn add_addresses_to_map<'a>(
     addresses: &Vec<(String, String)>,
     is_dangerous: bool,
 ) -> Result<(), String> {
-    // get uri for source, get host
-
     // get uri for target, get host and port
     for (source_str, target_str) in addresses {
         let source_uri = match Uri::try_from(source_str) {
@@ -101,8 +40,6 @@ fn add_addresses_to_map<'a>(
             Ok(uri) => uri,
             Err(e) => return Err(e.to_string()),
         };
-
-        // remove path?
 
         url_map.insert(source_host.to_string(), (target_uri, is_dangerous));
     }

@@ -45,7 +45,7 @@ async fn main() {
     };
 
     // create tls acceptor
-    let tls_acceptor = match native_tls::TlsAcceptor::builder(identity).build() {
+    let tls_acceptor = match native_tls::TlsAcceptor::new(identity) {
         Ok(acceptor) => tokio_native_tls::TlsAcceptor::from(acceptor),
         Err(e) => return println!("{}", e),
     };
@@ -63,18 +63,19 @@ async fn main() {
             Err(e) => return println!("{}", e),
         };
 
-        // errors on tls handshake failure
-        let io = match tls_acceptor.clone().accept(socket).await {
-            Ok(s) => TokioIo::new(s),
-            Err(_e) => continue,
-        };
+        let acceptor = tls_acceptor.clone();
 
         let service = service::Svc {
             addresses: addresses_arc.clone(),
         };
 
         tokio::task::spawn(async move {
-            // log service error
+            // errors on tls handshake failure
+            let io = match acceptor.accept(socket).await {
+                Ok(s) => TokioIo::new(s),
+                Err(_e) => return,
+            };
+
             if let Err(_e) = Builder::new(TokioExecutor::new())
                 .serve_connection(io, service)
                 .await

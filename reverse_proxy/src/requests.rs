@@ -10,12 +10,39 @@ use hyper_util::rt::TokioIo;
 use native_tls::TlsConnector;
 use tokio::net::TcpStream;
 
-use crate::addresses;
-
 pub type BoxedResponse = Response<BoxBody<bytes::Bytes, hyper::Error>>;
 
 const UPSTREAM_HANDSHAKE_ERROR: &str = "upstream handshake failed";
 const FAILED_TO_PROCESS_REQUEST_ERROR: &str = "failed to process request";
+
+pub fn get_host(req: &Request<Incoming>) -> Option<String> {
+    // http2
+    if let Some(host) = req.uri().host() {
+        return Some(host.to_string());
+    };
+
+    // http 1
+    let host_header = match req.headers().get(header::HOST) {
+        Some(h) => h,
+        _ => return None,
+    };
+
+    let host_str = match host_header.to_str() {
+        Ok(hs) => hs,
+        _ => return None,
+    };
+
+    let host_as_uri = match Uri::try_from(host_str) {
+        Ok(hau) => hau,
+        _ => return None,
+    };
+
+    if let Some(host) = host_as_uri.host() {
+        return Some(host.to_string());
+    }
+
+    None
+}
 
 pub async fn get_response(
     req: Request<Incoming>,
@@ -49,11 +76,28 @@ pub fn create_fallback_response(
         )
 }
 
-fn get_host_and_authority<'a>(uri: &Uri) -> Result<(&str, String), &'a str> {
-    match (uri.host(), addresses::get_host_and_port(uri)) {
-        (Some(host), Some(host_and_port)) => Ok((host, host_and_port)),
-        _ => Err("failed to retrieve URI from upstream URI"),
-    }
+fn get_host_and_authority<'a>(uri: &Uri) -> Result<(String, String), &'a str> {
+    let host = match uri.host() {
+        Some(h) => h.to_string(),
+        _ => return Err("failed to retrieve URI from upstream URI"),
+    };
+
+    let port = match uri.port() {
+        Some(p) => p.to_string(),
+        _ => {
+            let scheme = match uri.scheme() {
+                Some(h) => h.as_str(),
+                _ => "http",
+            };
+
+            match scheme {
+                "https" => "443".to_string(),
+                _ => "80".to_string(),
+            }
+        }
+    };
+
+    Ok((host.clone(), host + ":" + &port))
 }
 
 async fn create_tcp_stream<'a>(addr: &str) -> Result<TokioIo<TcpStream>, &'a str> {
