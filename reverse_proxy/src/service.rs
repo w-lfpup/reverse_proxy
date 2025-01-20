@@ -8,7 +8,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::addresses;
 use crate::requests;
 
 const URI_FROM_REQUEST_ERROR: &str = "unable to parse upstream URI from request";
@@ -25,7 +24,7 @@ impl Service<Request<Incoming>> for Svc {
 
     fn call(&self, mut req: Request<Incoming>) -> Self::Future {
         // get origin host from request
-        let host = match addresses::get_host(&req) {
+        let host = match requests::get_host(&req) {
             Some(uri) => uri,
             _ => {
                 return Box::pin(async {
