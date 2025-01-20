@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 pub fn get_host_and_port(uri: &Uri) -> Option<String> {
     let host = match uri.host() {
-        Some(h) => h,
+        Some(h) => h.to_string(),
         _ => return None,
     };
 
@@ -26,13 +26,10 @@ pub fn get_host_and_port(uri: &Uri) -> Option<String> {
         }
     };
 
-    Some(host.to_string() + ":" + &port)
+    Some(host + ":" + &port)
 }
 
 pub fn get_host(req: &Request<Incoming>) -> Option<String> {
-    // more durable to say
-    // match req.version()
-
     // http2
     if let Some(host) = req.uri().host() {
         return Some(host.to_string());
@@ -83,8 +80,6 @@ fn add_addresses_to_map<'a>(
     addresses: &Vec<(String, String)>,
     is_dangerous: bool,
 ) -> Result<(), String> {
-    // get uri for source, get host
-
     // get uri for target, get host and port
     for (source_str, target_str) in addresses {
         let source_uri = match Uri::try_from(source_str) {
@@ -101,8 +96,6 @@ fn add_addresses_to_map<'a>(
             Ok(uri) => uri,
             Err(e) => return Err(e.to_string()),
         };
-
-        // remove path?
 
         url_map.insert(source_host.to_string(), (target_uri, is_dangerous));
     }
