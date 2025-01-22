@@ -12,55 +12,55 @@ mod requests;
 mod service;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), String> {
     // create config
     let args = match env::args().nth(1) {
         Some(a) => path::PathBuf::from(a),
-        None => return println!("argument error: argv[0] config path not provided"),
+        None => return Err("argument error: argv[0] config path not provided".to_string()),
     };
     let config = match config::from_filepath(&args).await {
         Ok(c) => c,
-        Err(e) => return println!("{}", e),
+        Err(e) => return Err(e),
     };
 
     // if destination URIs fail to parse, the server fails to run.
     let addresses = match addresses::create_address_map(&config) {
         Ok(addrs) => addrs,
-        Err(e) => return println!("{}", e),
+        Err(e) => return Err(e),
     };
     let addresses_arc = Arc::new(addresses);
 
     // tls cert and keys
     let cert = match fs::read(&config.cert_filepath).await {
         Ok(f) => f,
-        Err(e) => return println!("{}", e),
+        Err(e) => return Err(e.to_string()),
     };
     let key = match fs::read(&config.key_filepath).await {
         Ok(f) => f,
-        Err(e) => return println!("{}", e),
+        Err(e) => return Err(e.to_string()),
     };
     let identity = match Identity::from_pkcs8(&cert, &key) {
         Ok(pk) => pk,
-        Err(e) => return println!("{}", e),
+        Err(e) => return Err(e.to_string()),
     };
 
     // create tls acceptor
     let tls_acceptor = match native_tls::TlsAcceptor::new(identity) {
         Ok(acceptor) => tokio_native_tls::TlsAcceptor::from(acceptor),
-        Err(e) => return println!("{}", e),
+        Err(e) => return Err(e.to_string()),
     };
 
     // bind tcp listeners
     let listener = match TcpListener::bind(config.host_and_port).await {
         Ok(l) => l,
-        Err(e) => return println!("{}", e),
+        Err(e) => return Err(e.to_string()),
     };
 
     loop {
         // rate limiting on _remote_addr
         let (socket, _remote_addr) = match listener.accept().await {
             Ok(s) => s,
-            Err(e) => return println!("{}", e),
+            Err(e) => return Err(e.to_string()),
         };
 
         let acceptor = tls_acceptor.clone();
