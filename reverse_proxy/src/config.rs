@@ -46,7 +46,8 @@ pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, String> {
         Ok(j) => j,
         Err(e) => return Err(e.to_string()),
     };
-    if key_filepath.is_dir() {
+
+    if !key_filepath.is_file() {
         return Err(
             "failed to create absolute path from relative path for key_filepath".to_string(),
         );
@@ -56,7 +57,8 @@ pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, String> {
         Ok(j) => j,
         Err(e) => return Err(e.to_string()),
     };
-    if cert_filepath.is_dir() {
+    
+    if !cert_filepath.is_file() {
         return Err(
             "failed to create absolute path from relative path for cert_filepath".to_string(),
         );
