@@ -8,7 +8,6 @@ use tokio::net::TcpListener;
 
 mod addresses;
 mod config;
-mod requests;
 mod service;
 
 #[tokio::main]

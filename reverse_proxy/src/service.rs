@@ -7,20 +7,20 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::requests;
+use response;
 
 pub struct Svc {
     pub addresses: Arc<HashMap<String, (Uri, bool)>>,
 }
 
 impl Service<Request<Incoming>> for Svc {
-    type Response = requests::BoxedResponse;
+    type Response = response::BoxedResponse;
     type Error = hyper::http::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn call(&self, req: Request<Incoming>) -> Self::Future {
         let addresses = self.addresses.clone();
 
-        Box::pin(async move { requests::create_response(req, addresses).await })
+        Box::pin(async move { response::build_response(req, addresses).await })
     }
 }
