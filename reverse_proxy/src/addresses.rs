@@ -1,4 +1,4 @@
-use config::Config;
+use crate::config::Config;
 use hyper::Uri;
 use std::collections::HashMap;
 

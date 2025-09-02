@@ -1,4 +1,4 @@
-# reverse_proxy
+# Reverse Proxy
 
 Route requests to local or upstream servers.
 

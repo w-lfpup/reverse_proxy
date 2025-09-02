@@ -24,6 +24,10 @@ impl Service<Request<Incoming>> for Svc {
 
     fn call(&self, mut req: Request<Incoming>) -> Self::Future {
         // get origin host from request
+
+        // maybe should be part of a submodule
+        //
+        //
         let host = match requests::get_host(&req) {
             Some(uri) => uri,
             _ => {
@@ -62,6 +66,9 @@ impl Service<Request<Incoming>> for Svc {
         };
 
         return Box::pin(async move { requests::get_response(req, is_dangerous).await });
+        //
+        //
+        //
     }
 }
 

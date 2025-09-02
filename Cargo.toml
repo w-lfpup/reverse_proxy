@@ -1,18 +1,17 @@
 [workspace]
 resolver = "2"
-members = ["config", "reverse_proxy"]
+members = ["response", "reverse_proxy"]
 
 [workspace.dependencies]
-hyper = { version = "1", features = ["full"] }
-tokio = { version = "1", features = ["full"] }
 bytes = "1"
-tokio-util = "0.7"
-tokio-native-tls = { version = "0.3" }
+futures-util = { version = "0.3", default-features = false }
+http = "1"
 http-body-util = "0.1"
+hyper = { version = "1", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 native-tls = "0.2"
-http = "1"
-
-futures-util = { version = "0.3", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+tokio-native-tls = { version = "0.3" }
+tokio-util = "0.7"

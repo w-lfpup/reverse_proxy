@@ -1,4 +1,3 @@
-use config;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto::Builder;
 use native_tls::Identity;
@@ -8,6 +7,7 @@ use tokio::fs;
 use tokio::net::TcpListener;
 
 mod addresses;
+mod config;
 mod requests;
 mod service;
 
