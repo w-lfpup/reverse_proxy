@@ -3,19 +3,24 @@ use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
 use hyper::client::conn::{http1, http2};
 use hyper::header;
-use hyper::Uri;
+use hyper::{Uri};
 use hyper::{Request, Response, StatusCode};
+use http::uri::Scheme;
 use hyper_util::rt::TokioExecutor;
 use hyper_util::rt::TokioIo;
 use native_tls::TlsConnector;
 use tokio::net::TcpStream;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub type BoxedResponse = Response<BoxBody<bytes::Bytes, hyper::Error>>;
 
 const UPSTREAM_HANDSHAKE_ERROR: &str = "upstream handshake failed";
 const FAILED_TO_PROCESS_REQUEST_ERROR: &str = "failed to process request";
+const URI_FROM_REQUEST_ERROR: &str = "unable to parse upstream URI from request";
+const UPSTREAM_URI_ERROR: &str = "falied to update request with upstream URI";
 
-pub fn get_host(req: &Request<Incoming>) -> Option<String> {
+fn get_host(req: &Request<Incoming>) -> Option<String> {
     // http2
     if let Some(host) = req.uri().host() {
         return Some(host.to_string());
@@ -267,4 +272,57 @@ async fn send_http2_tls_request(
     };
 
     create_fallback_response(&StatusCode::BAD_GATEWAY, &FAILED_TO_PROCESS_REQUEST_ERROR)
+}
+
+pub async fn create_response(mut req: Request<Incoming>, addresses: Arc<HashMap<String, (Uri, bool)>>) -> Result<BoxedResponse, hyper::http::Error> {
+    let host = match get_host(&req) {
+        Some(uri) => uri,
+        _ => return create_fallback_response(
+            &StatusCode::BAD_REQUEST,
+            &URI_FROM_REQUEST_ERROR,
+        )
+    };
+
+    // get target uri
+    let (target_uri, is_dangerous) = match addresses.get(&host) {
+        Some((trgt_uri, is_dngrs)) => (trgt_uri.clone(), is_dngrs.clone()),
+        _ => return create_fallback_response(
+            &StatusCode::BAD_GATEWAY,
+            &URI_FROM_REQUEST_ERROR,
+        ),
+    };
+
+    // replace dest_uri path and query with target path and query
+    if let Err(_) = update_request_with_dest_uri(&mut req, target_uri) {
+        return create_fallback_response(
+            &StatusCode::INTERNAL_SERVER_ERROR,
+            &UPSTREAM_URI_ERROR,
+        );
+    };
+
+    get_response(req, is_dangerous).await
+}
+
+fn update_request_with_dest_uri(
+    req: &mut Request<Incoming>,
+    target_uri: Uri,
+) -> Result<(), String> {
+    let mut dest_parts = target_uri.into_parts();
+
+    if let None = dest_parts.scheme {
+        dest_parts.scheme = Some(Scheme::HTTP);
+    }
+
+    // start with no path
+    dest_parts.path_and_query = None;
+    if let Some(path_and_query) = req.uri().path_and_query() {
+        dest_parts.path_and_query = Some(path_and_query.clone());
+    }
+
+    *req.uri_mut() = match Uri::from_parts(dest_parts) {
+        Ok(u) => u,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    Ok(())
 }
