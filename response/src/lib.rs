@@ -1,21 +1,23 @@
+use bytes::Bytes;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
 use hyper::client::conn::{http1, http2};
-use hyper::header;
-use hyper::Uri;
-use hyper::{Request, Response, StatusCode};
-use hyper_util::rt::TokioExecutor;
-use hyper_util::rt::TokioIo;
+use hyper::{header, Request, Response, StatusCode, Uri};
+use hyper_util::rt::{TokioExecutor, TokioIo};
 use native_tls::TlsConnector;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::net::TcpStream;
 
-pub type BoxedResponse = Response<BoxBody<bytes::Bytes, hyper::Error>>;
+pub type BoxedResponse = Response<BoxBody<Bytes, hyper::Error>>;
 
 const UPSTREAM_HANDSHAKE_ERROR: &str = "upstream handshake failed";
 const FAILED_TO_PROCESS_REQUEST_ERROR: &str = "failed to process request";
+const URI_FROM_REQUEST_ERROR: &str = "unable to parse upstream URI from request";
+const UPSTREAM_URI_ERROR: &str = "falied to update request with upstream URI";
 
-pub fn get_host(req: &Request<Incoming>) -> Option<String> {
+fn get_host(req: &Request<Incoming>) -> Option<String> {
     // http2
     if let Some(host) = req.uri().host() {
         return Some(host.to_string());
@@ -70,7 +72,7 @@ pub fn create_fallback_response(
         .status(status_code)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
         .body(
-            Full::new(bytes::Bytes::from(body_str))
+            Full::new(Bytes::from(body_str))
                 .map_err(|e| match e {})
                 .boxed(),
         )
@@ -267,4 +269,47 @@ async fn send_http2_tls_request(
     };
 
     create_fallback_response(&StatusCode::BAD_GATEWAY, &FAILED_TO_PROCESS_REQUEST_ERROR)
+}
+
+pub async fn build_response(
+    mut req: Request<Incoming>,
+    addresses: Arc<HashMap<String, (Uri, bool)>>,
+) -> Result<BoxedResponse, hyper::http::Error> {
+    let host = match get_host(&req) {
+        Some(uri) => uri,
+        _ => return create_fallback_response(&StatusCode::BAD_REQUEST, &URI_FROM_REQUEST_ERROR),
+    };
+
+    // get target uri
+    let (target_uri, is_dangerous) = match addresses.get(&host) {
+        Some((trgt_uri, is_dngrs)) => (trgt_uri.clone(), is_dngrs.clone()),
+        _ => return create_fallback_response(&StatusCode::BAD_GATEWAY, &URI_FROM_REQUEST_ERROR),
+    };
+
+    // replace dest_uri path and query with target path and query
+    if let Err(_) = update_request_with_dest_uri(&mut req, target_uri) {
+        return create_fallback_response(&StatusCode::INTERNAL_SERVER_ERROR, &UPSTREAM_URI_ERROR);
+    };
+
+    get_response(req, is_dangerous).await
+}
+
+fn update_request_with_dest_uri(
+    req: &mut Request<Incoming>,
+    target_uri: Uri,
+) -> Result<(), String> {
+    let mut dest_parts = target_uri.into_parts();
+
+    // start with no path
+    dest_parts.path_and_query = None;
+    if let Some(path_and_query) = req.uri().path_and_query() {
+        dest_parts.path_and_query = Some(path_and_query.clone());
+    }
+
+    *req.uri_mut() = match Uri::from_parts(dest_parts) {
+        Ok(u) => u,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    Ok(())
 }

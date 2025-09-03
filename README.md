@@ -1,13 +1,11 @@
-# reverse_proxy
+# Reverse Proxy
 
 Route requests to local or upstream servers.
 
 ## About
 
 A reverse proxy written in rust using [tokio](https://tokio.rs/) and
-[hyper](https://hyper.rs/).
-
-`reverse_proxy` forwards incoming encrypted http1 and http2 requests to upstream servers.
+[hyper](https://hyper.rs/) that forwards incoming encrypted http1 and http2 requests to upstream servers.
 
 ## How to use
 
@@ -67,8 +65,6 @@ This optional property is intended to forward requests to servers using self-sig
 ```sh
 reverse_proxy ./path/to/config.json
 ```
-
-Open a browser and visit `https://localhost:XXXX`.
 
 ## Licence
 
