@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use http::uri::Scheme;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
@@ -300,10 +299,6 @@ fn update_request_with_dest_uri(
     target_uri: Uri,
 ) -> Result<(), String> {
     let mut dest_parts = target_uri.into_parts();
-
-    if let None = dest_parts.scheme {
-        dest_parts.scheme = Some(Scheme::HTTP);
-    }
 
     // start with no path
     dest_parts.path_and_query = None;
