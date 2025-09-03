@@ -1,19 +1,17 @@
+use bytes::Bytes;
 use http::uri::Scheme;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
 use hyper::client::conn::{http1, http2};
-use hyper::header;
-use hyper::Uri;
-use hyper::{Request, Response, StatusCode};
-use hyper_util::rt::TokioExecutor;
-use hyper_util::rt::TokioIo;
+use hyper::{header, Request, Response, StatusCode, Uri};
+use hyper_util::rt::{TokioExecutor, TokioIo};
 use native_tls::TlsConnector;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 
-pub type BoxedResponse = Response<BoxBody<bytes::Bytes, hyper::Error>>;
+pub type BoxedResponse = Response<BoxBody<Bytes, hyper::Error>>;
 
 const UPSTREAM_HANDSHAKE_ERROR: &str = "upstream handshake failed";
 const FAILED_TO_PROCESS_REQUEST_ERROR: &str = "failed to process request";
@@ -75,7 +73,7 @@ pub fn create_fallback_response(
         .status(status_code)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
         .body(
-            Full::new(bytes::Bytes::from(body_str))
+            Full::new(Bytes::from(body_str))
                 .map_err(|e| match e {})
                 .boxed(),
         )

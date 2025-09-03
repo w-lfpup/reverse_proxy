@@ -1,6 +1,7 @@
-use crate::config::Config;
 use hyper::Uri;
 use std::collections::HashMap;
+
+use crate::config::Config;
 
 pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)>, String> {
     // get host incoming
