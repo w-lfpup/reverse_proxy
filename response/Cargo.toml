@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 bytes = { workspace = true }
-futures-util = { workspace = true }
 http = { workspace = true }
 http-body-util = { workspace = true }
 hyper = { workspace = true }
@@ -15,4 +14,3 @@ hyper-util = { workspace = true }
 native-tls = { workspace = true }
 tokio = { workspace = true }
 tokio-native-tls = { workspace = true }
-tokio-util = { workspace = true }
