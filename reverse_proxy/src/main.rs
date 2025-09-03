@@ -80,6 +80,7 @@ async fn main() -> Result<(), String> {
                 .await
             {
                 // log tls error
+                return;
             }
         });
     }
