@@ -20,7 +20,7 @@ pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)
     Ok(hashmap)
 }
 
-fn add_addresses_to_map<'a>(
+fn add_addresses_to_map(
     url_map: &mut HashMap<String, (Uri, bool)>,
     addresses: &Vec<(String, String)>,
     is_dangerous: bool,
