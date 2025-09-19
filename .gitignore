@@ -16,3 +16,6 @@ Cargo.lock
 # REPO ignores
 *.key
 *.crt
+
+# REVERSE_PROXY
+.DS_Store
