@@ -28,8 +28,6 @@ async fn main() -> Result<(), String> {
         Err(e) => return Err(e),
     };
 
-    println!("addresses: {:?}", addresses);
-
     // tls cert and keys
     let cert = match fs::read(&config.cert_filepath).await {
         Ok(f) => f,

@@ -34,7 +34,6 @@ fn add_addresses_to_map(
             _ => return Err("could not parse host from source uri".to_string()),
         };
 
-        println!("source host: {:?}", source_host);
         let target_uri = match Uri::try_from(target_str) {
             Ok(uri) => uri,
             Err(e) => return Err(e.to_string()),
