@@ -24,6 +24,11 @@ pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, String> {
         Err(e) => return Err(e.to_string()),
     };
 
+    let parent_dir = match config_path.parent() {
+        Some(p) => p.to_path_buf(),
+        _ => return Err("parent directory of config not found".to_string()),
+    };
+
     let mut config: Config = match serde_json::from_str(&json_as_str) {
         Ok(j) => j,
         Err(e) => return Err(e.to_string()),
