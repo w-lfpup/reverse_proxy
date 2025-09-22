@@ -29,11 +29,12 @@ fn add_addresses_to_map(
             Err(e) => return Err(e.to_string()),
         };
 
-        let source_host = match source_uri.authority() {
+        let source_host = match source_uri.host() {
             Some(h) => h,
             _ => return Err("could not parse host from source uri".to_string()),
         };
 
+        println!("source host: {:?}", source_host);
         let target_uri = match Uri::try_from(target_str) {
             Ok(uri) => uri,
             Err(e) => return Err(e.to_string()),

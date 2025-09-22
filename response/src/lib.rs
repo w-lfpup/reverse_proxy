@@ -280,11 +280,15 @@ pub async fn build_response(
         _ => return create_fallback_response(&StatusCode::BAD_REQUEST, &URI_FROM_REQUEST_ERROR),
     };
 
+    println!("host!: {:?}", host);
+
     // get target uri
     let (target_uri, is_dangerous) = match addresses.get(&host) {
         Some((trgt_uri, is_dngrs)) => (trgt_uri.clone(), is_dngrs.clone()),
         _ => return create_fallback_response(&StatusCode::BAD_GATEWAY, &URI_FROM_REQUEST_ERROR),
     };
+
+    println!("target uri!: {:?}", target_uri);
 
     // replace dest_uri path and query with target path and query
     if let Err(_) = update_request_with_dest_uri(&mut req, target_uri) {
