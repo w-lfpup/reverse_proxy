@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::path::PathBuf;
+use std::{env, path};
 use tokio::fs;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -13,13 +14,23 @@ pub struct Config {
 }
 
 pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, String> {
-    let json_as_str = match fs::read_to_string(&filepath).await {
+    let config_path = match path::absolute(filepath) {
+        Ok(pb) => pb,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    let json_as_str = match fs::read_to_string(&config_path).await {
         Ok(r) => r,
         Err(e) => return Err(e.to_string()),
     };
 
-    match serde_json::from_str(&json_as_str) {
+    let mut config: Config = match serde_json::from_str(&json_as_str) {
         Ok(j) => j,
         Err(e) => return Err(e.to_string()),
-    }
+    };
+
+    config.key_filepath = parent_dir.join(&config.key_filepath);
+    config.cert_filepath = parent_dir.join(&config.cert_filepath);
+
+    Ok(config)
 }
