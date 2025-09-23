@@ -24,10 +24,9 @@ async fn main() -> Result<(), String> {
 
     // if destination URIs fail to parse, the server fails to run.
     let addresses = match addresses::create_address_map(&config) {
-        Ok(addrs) => addrs,
+        Ok(addrs) => Arc::new(addrs),
         Err(e) => return Err(e),
     };
-    let addresses_arc = Arc::new(addresses);
 
     // tls cert and keys
     let cert = match fs::read(&config.cert_filepath).await {
@@ -65,7 +64,7 @@ async fn main() -> Result<(), String> {
         let acceptor = tls_acceptor.clone();
 
         let service = service::Svc {
-            addresses: addresses_arc.clone(),
+            addresses: addresses.clone(),
         };
 
         tokio::task::spawn(async move {
