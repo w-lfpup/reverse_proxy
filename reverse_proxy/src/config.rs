@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::path;
 use std::path::PathBuf;
-use std::{env, path};
 use tokio::fs;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

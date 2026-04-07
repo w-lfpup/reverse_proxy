@@ -49,13 +49,14 @@ async fn main() -> Result<(), String> {
     };
 
     // bind tcp listeners
-    let listener = match TcpListener::bind(config.host_and_port).await {
+    let listener = match TcpListener::bind(&config.host_and_port).await {
         Ok(l) => l,
         Err(e) => return Err(e.to_string()),
     };
 
+    println!("Reverse Proxy: {}", &config.host_and_port);
+
     loop {
-        // rate limiting on _remote_addr
         let (socket, _remote_addr) = match listener.accept().await {
             Ok(s) => s,
             Err(e) => return Err(e.to_string()),
@@ -68,17 +69,16 @@ async fn main() -> Result<(), String> {
         };
 
         tokio::task::spawn(async move {
-            // errors on tls handshake failure
             let io = match acceptor.accept(socket).await {
                 Ok(s) => TokioIo::new(s),
                 Err(_e) => return,
             };
 
-            if let Err(_e) = Builder::new(TokioExecutor::new())
+            if let Err(e) = Builder::new(TokioExecutor::new())
                 .serve_connection(io, service)
                 .await
             {
-                // log tls error
+                println!("{}", e);
                 return;
             }
         });
