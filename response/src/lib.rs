@@ -17,6 +17,14 @@ const FAILED_TO_PROCESS_REQUEST_ERROR: &str = "failed to process request";
 const URI_FROM_REQUEST_ERROR: &str = "unable to parse upstream URI from request";
 const UPSTREAM_URI_ERROR: &str = "falied to update request with upstream URI";
 
+#[derive(Clone, Debug)]
+pub struct AddressParams {
+    pub uri: Uri,
+    pub is_dangerous: bool,
+}
+
+pub type AddressMap = HashMap<String, AddressParams>;
+
 fn get_host(req: &Request<Incoming>) -> Option<String> {
     // http2
     if let Some(host) = req.uri().host() {
@@ -273,7 +281,7 @@ async fn send_http2_tls_request(
 
 pub async fn build_response(
     mut req: Request<Incoming>,
-    addresses: Arc<HashMap<String, (Uri, bool)>>,
+    addresses: Arc<AddressMap>,
 ) -> Result<BoxedResponse, hyper::http::Error> {
     let host = match get_host(&req) {
         Some(uri) => uri,
@@ -281,24 +289,24 @@ pub async fn build_response(
     };
 
     // get target uri
-    let (target_uri, is_dangerous) = match addresses.get(&host) {
-        Some((trgt_uri, is_dngrs)) => (trgt_uri.clone(), is_dngrs.clone()),
+    let address_params = match addresses.get(&host) {
+        Some(params) => params,
         _ => return create_fallback_response(&StatusCode::BAD_GATEWAY, &URI_FROM_REQUEST_ERROR),
     };
 
     // replace dest_uri path and query with target path and query
-    if let Err(_) = update_request_with_dest_uri(&mut req, target_uri) {
+    if let Err(_) = update_request_with_dest_uri(&mut req, &address_params.uri) {
         return create_fallback_response(&StatusCode::INTERNAL_SERVER_ERROR, &UPSTREAM_URI_ERROR);
     };
 
-    get_response(req, is_dangerous).await
+    get_response(req, address_params.is_dangerous).await
 }
 
 fn update_request_with_dest_uri(
     req: &mut Request<Incoming>,
-    target_uri: Uri,
+    target_uri: &Uri,
 ) -> Result<(), String> {
-    let mut dest_parts = target_uri.into_parts();
+    let mut dest_parts = target_uri.clone().into_parts();
 
     // start with no path
     dest_parts.path_and_query = None;
