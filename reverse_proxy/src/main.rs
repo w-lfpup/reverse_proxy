@@ -10,6 +10,9 @@ mod addresses;
 mod config;
 mod service;
 
+// Needs to be errors
+// create key errors
+
 #[tokio::main]
 async fn main() -> Result<(), String> {
     // create config

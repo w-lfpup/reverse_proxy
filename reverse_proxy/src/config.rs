@@ -13,6 +13,8 @@ pub struct Config {
     pub dangerous_self_signed_addresses: Option<Vec<(String, String)>>,
 }
 
+// Serde path fs errors in one function
+
 pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, String> {
     let config_path = match path::absolute(filepath) {
         Ok(pb) => pb,

@@ -25,6 +25,7 @@ pub struct AddressParams {
 
 pub type AddressMap = HashMap<String, AddressParams>;
 
+
 fn get_host(req: &Request<Incoming>) -> Option<String> {
     // http2
     if let Some(host) = req.uri().host() {
@@ -281,7 +282,7 @@ async fn send_http2_tls_request(
 
 pub async fn build_response(
     mut req: Request<Incoming>,
-    addresses: Arc<AddressMap>,
+    addresses: Arc<HashMap<String, AddressParams>>,
 ) -> Result<BoxedResponse, hyper::http::Error> {
     let host = match get_host(&req) {
         Some(uri) => uri,

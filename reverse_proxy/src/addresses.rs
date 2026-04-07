@@ -2,6 +2,8 @@ use crate::config::Config;
 use hyper::Uri;
 use response::{AddressMap, AddressParams};
 
+// Three map errors
+
 pub fn create_address_map(config: &Config) -> Result<AddressMap, String> {
     let mut hashmap = AddressMap::new();
     if let Err(e) = add_addresses_to_map(&mut hashmap, &config.addresses, false) {
