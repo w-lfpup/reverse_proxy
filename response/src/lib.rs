@@ -91,7 +91,6 @@ fn update_request_with_dest_uri(
 ) -> Result<(), InvalidUriParts> {
     let mut dest_parts = target_uri.clone().into_parts();
 
-    // start with no path
     dest_parts.path_and_query = None;
     if let Some(path_and_query) = req.uri().path_and_query() {
         dest_parts.path_and_query = Some(path_and_query.clone());
