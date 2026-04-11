@@ -50,9 +50,8 @@ async fn create_tls_stream<'a>(
     is_dangerous: bool,
 ) -> Result<TokioIo<tokio_native_tls::TlsStream<TcpStream>>, &'a str> {
     let mut builder = TlsConnector::builder();
-    if is_dangerous {
-        builder.danger_accept_invalid_certs(true);
-    }
+    builder.danger_accept_invalid_certs(is_dangerous);
+
     let cx = match builder.build() {
         Ok(c) => c,
         _ => return Err("failed to build TLS connection"),

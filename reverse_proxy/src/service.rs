@@ -17,7 +17,6 @@ impl Service<Request<Incoming>> for Svc {
 
     fn call(&self, req: Request<Incoming>) -> Self::Future {
         let addresses = self.addresses.clone();
-
         Box::pin(async move { build_response(req, addresses).await })
     }
 }

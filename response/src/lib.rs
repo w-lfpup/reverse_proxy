@@ -97,7 +97,7 @@ fn update_request_with_dest_uri(
     Ok(())
 }
 
-pub async fn get_response(
+async fn get_response(
     req: Request<Incoming>,
     is_dangerous: bool,
 ) -> Result<BoxedResponse, hyper::http::Error> {
