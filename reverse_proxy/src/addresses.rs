@@ -1,10 +1,11 @@
-use hyper::Uri;
-use std::collections::HashMap;
-
 use crate::config::Config;
+use hyper::Uri;
+use response::{AddressMap, AddressParams};
 
-pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)>, String> {
-    let mut hashmap = HashMap::<String, (Uri, bool)>::new();
+// Three map errors
+
+pub fn create_address_map(config: &Config) -> Result<AddressMap, String> {
+    let mut hashmap = AddressMap::new();
     if let Err(e) = add_addresses_to_map(&mut hashmap, &config.addresses, false) {
         return Err(e);
     };
@@ -19,7 +20,7 @@ pub fn create_address_map(config: &Config) -> Result<HashMap<String, (Uri, bool)
 }
 
 fn add_addresses_to_map(
-    url_map: &mut HashMap<String, (Uri, bool)>,
+    url_map: &mut AddressMap,
     addresses: &Vec<(String, String)>,
     is_dangerous: bool,
 ) -> Result<(), String> {
@@ -34,12 +35,12 @@ fn add_addresses_to_map(
             _ => return Err("could not parse host from source uri".to_string()),
         };
 
-        let target_uri = match Uri::try_from(target_str) {
+        let uri = match Uri::try_from(target_str) {
             Ok(uri) => uri,
             Err(e) => return Err(e.to_string()),
         };
 
-        url_map.insert(source_host.to_string(), (target_uri, is_dangerous));
+        url_map.insert(source_host.to_string(), AddressParams { uri, is_dangerous });
     }
 
     Ok(())

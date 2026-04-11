@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::path;
 use std::path::PathBuf;
-use std::{env, path};
 use tokio::fs;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -12,6 +12,8 @@ pub struct Config {
     pub addresses: Vec<(String, String)>,
     pub dangerous_self_signed_addresses: Option<Vec<(String, String)>>,
 }
+
+// Serde path fs errors in one function
 
 pub async fn from_filepath(filepath: &PathBuf) -> Result<Config, String> {
     let config_path = match path::absolute(filepath) {

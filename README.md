@@ -54,11 +54,11 @@ A valid configuration example can be found at [`./reverse_proxy.example.json`](.
 
 #### Allow self-signed certificates
 
-ONLY USE the `dangerous_self_signed_addresses` property WITH EXTREME CAUTION.
+Use the `dangerous_self_signed_addresses` property WITH EXTREME CAUTION.
 
 Ideally never.
 
-This optional property is intended to forward requests to servers using self-signed TLS certificates on local networks.
+This optional property is intended to forward requests on local networks to servers using self-signed TLS certificates.
 
 ### Run reverse_proxy
 
