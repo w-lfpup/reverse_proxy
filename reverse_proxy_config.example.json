@@ -4,7 +4,7 @@
   "cert_filepath": "./demo/self-signed-cert.crt",
   "addresses": [
     [
-      "127.0.0.1",
+      "https://127.0.0.1",
       "http://127.0.0.1:3000"
     ]
   ]
