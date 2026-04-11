@@ -8,11 +8,6 @@ use std::sync::Arc;
 
 mod requests;
 
-use crate::requests::{
-    create_fallback_response, send_http1_request, send_http1_tls_request, send_http2_request,
-    send_http2_tls_request,
-};
-
 pub type BoxedResponse = Response<BoxBody<Bytes, hyper::Error>>;
 
 const URI_FROM_REQUEST_ERROR: &str = "unable to parse upstream URI from request";
@@ -32,17 +27,30 @@ pub async fn build_response(
 ) -> Result<BoxedResponse, hyper::http::Error> {
     let host = match get_host(&req) {
         Some(uri) => uri,
-        _ => return create_fallback_response(&StatusCode::BAD_REQUEST, &URI_FROM_REQUEST_ERROR),
+        _ => {
+            return requests::create_fallback_response(
+                &StatusCode::BAD_REQUEST,
+                &URI_FROM_REQUEST_ERROR,
+            )
+        }
     };
 
     // get target uri
     let address_params = match addresses.get(&host) {
         Some(params) => params,
-        _ => return create_fallback_response(&StatusCode::BAD_GATEWAY, &URI_FROM_REQUEST_ERROR),
+        _ => {
+            return requests::create_fallback_response(
+                &StatusCode::BAD_GATEWAY,
+                &URI_FROM_REQUEST_ERROR,
+            )
+        }
     };
 
     if let Err(_) = update_request_with_dest_uri(&mut req, &address_params.uri) {
-        return create_fallback_response(&StatusCode::INTERNAL_SERVER_ERROR, &UPSTREAM_URI_ERROR);
+        return requests::create_fallback_response(
+            &StatusCode::INTERNAL_SERVER_ERROR,
+            &UPSTREAM_URI_ERROR,
+        );
     };
 
     get_response(req, address_params.is_dangerous).await
@@ -108,9 +116,11 @@ async fn get_response(
     };
 
     match (version, scheme) {
-        (hyper::Version::HTTP_2, "https") => send_http2_tls_request(req, is_dangerous).await,
-        (hyper::Version::HTTP_2, _) => send_http2_request(req).await,
-        (_, "https") => send_http1_tls_request(req, is_dangerous).await,
-        _ => send_http1_request(req).await,
+        (hyper::Version::HTTP_2, "https") => {
+            requests::send_http2_tls_request(req, is_dangerous).await
+        }
+        (hyper::Version::HTTP_2, _) => requests::send_http2_request(req).await,
+        (_, "https") => requests::send_http1_tls_request(req, is_dangerous).await,
+        _ => requests::send_http1_request(req).await,
     }
 }
