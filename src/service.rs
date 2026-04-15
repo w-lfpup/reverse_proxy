@@ -1,11 +1,11 @@
+use hyper::Request;
 use hyper::body::Incoming;
 use hyper::service::Service;
-use hyper::Request;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::response::{build_response, AddressMap, BoxedResponse};
+use crate::response::{AddressMap, BoxedResponse, build_response};
 
 pub struct Svc {
     pub addresses: Arc<AddressMap>,

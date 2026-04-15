@@ -14,8 +14,7 @@ A reverse proxy written in rust using [tokio](https://tokio.rs/) and
 Execute the following to install `reverse_proxy`.
 
 ```sh
-git clone https://github.com/wolfpup_software/reverse_proxy
-cargo install --path reverse_proxy/reverse_proxy
+cargo install --git https://github.com/wolfpup_software/reverse_proxy
 ```
 
 ### Create a JSON config
