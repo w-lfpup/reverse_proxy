@@ -1,6 +1,7 @@
+use hyper::Uri;
+
 use crate::config::Config;
 use crate::response::{AddressMap, AddressParams};
-use hyper::Uri;
 
 // Three map errors
 
