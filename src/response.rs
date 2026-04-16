@@ -2,11 +2,11 @@ use bytes::Bytes;
 use http_body_util::combinators::BoxBody;
 use hyper::body::Incoming;
 use hyper::http::uri::InvalidUriParts;
-use hyper::{header, Request, Response, StatusCode, Uri};
+use hyper::{Request, Response, StatusCode, Uri, header};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-mod requests;
+use crate::requests;
 
 pub type BoxedResponse = Response<BoxBody<Bytes, hyper::Error>>;
 
@@ -31,7 +31,7 @@ pub async fn build_response(
             return requests::create_fallback_response(
                 &StatusCode::BAD_REQUEST,
                 &URI_FROM_REQUEST_ERROR,
-            )
+            );
         }
     };
 
@@ -42,7 +42,7 @@ pub async fn build_response(
             return requests::create_fallback_response(
                 &StatusCode::BAD_GATEWAY,
                 &URI_FROM_REQUEST_ERROR,
-            )
+            );
         }
     };
 
